@@ -1,0 +1,43 @@
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 5
+  periodSeconds: 30
+  timeoutSeconds: 10
+  successThreshold: 1
+  failureThreshold: 4
+
+startupProbe:
+  enabled: true
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 30
+
+resources: {}
+
+timezone: Asia/Seoul
+
+dataRetention: 96h
+
+persistence:
+  enabled: true
+  storage: 8Gi
+  # storageClassName: mystorageclass
+
+finalizers:
+  #- mongodb.samsung.com/finalizer-delete-pvcs
+
+clusterDomainName: ""
+affinity: {}
+tolerations: []
+sidecars: []
+initContainers: []
+labels: {}
+annotations: {}
+
+ipv6: false
+ipFamilyPolicy: ""
+ipFamilies: []
+
+envs: []

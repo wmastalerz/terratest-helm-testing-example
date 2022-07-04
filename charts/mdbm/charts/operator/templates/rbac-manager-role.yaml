@@ -1,0 +1,255 @@
+{{- if .Values.global.clusterWideInstall }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mdbm-operator-manager-role
+{{- else }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mdbm-operator-manager-role
+  namespace: {{ .Release.Namespace }}
+{{- end }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/exec
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbbackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbbackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbbackups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbcontrollerruntimeconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbcontrollerruntimeconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbcontrollerruntimeconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbreplicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbreplicasets/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbreplicasets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbs/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - mongodbs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - pmmservers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - pmmservers/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mongodb.samsung.com
+  resources:
+  - pmmservers/status
+  verbs:
+  - get
+  - patch
+  - update

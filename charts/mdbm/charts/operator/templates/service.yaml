@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mdbm-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    control-plane: controller-manager
+{{ include "mdbm-operator.labels" . | indent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8443
+      targetPort: https
+      name: https
+      protocol: TCP
+    - port: 443
+      protocol: TCP
+      targetPort: 9443
+      name: webhook
+  selector:
+    app.kubernetes.io/name: {{ include "mdbm-operator.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}

@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "keyhole.fullname" . }}
+  labels:
+    {{- include "keyhole.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "keyhole.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "keyhole.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.global.registries.registry1.imagePullSecret.create }}
+      imagePullSecrets:
+      - name: {{ .Values.global.registries.registry1.imagePullSecret.name }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.global.registries.registry1.name }}/{{ .Values.global.images.keyhole.repository }}:{{ .Values.global.images.keyhole.tag }}"
+          imagePullPolicy: {{ .Values.global.registries.registry1.imagePullPolicy }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

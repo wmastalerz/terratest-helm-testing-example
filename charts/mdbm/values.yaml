@@ -1,0 +1,54 @@
+global:
+  registries:
+    registry1:
+      name: registry:8282
+      imagePullPolicy: IfNotPresent
+      imagePullSecret:
+        create: false
+        name: mysecret
+        encodedSecret: mysecret
+  images:
+    operator:
+      image: mdbm/mongodb-operator
+      tag: latest
+    api:
+      image: mdbm/api
+      tag: latest
+    pmm:
+      image: mdbm/pmm-server
+      tag: latest
+    simplecert:
+      image: mdbm/simplecert
+      tag: latest
+    keyhole:
+      image: mdbm/keyhole
+      tag: latest
+    rbacProxy:
+      image: mdbm/kube-rbac-proxy
+      tag: v0.11.0
+
+  nameOverride: db
+  openshift: false
+  pmm:
+    username: admin
+    password: admin
+  clusterWideInstall: true
+  pmmLabelName: api.mongodb.samsung.com/pmm-server
+  # either Development or Production environment
+  production: true
+
+operator:
+  enabled: true
+
+api:
+  enabled: true
+
+pmm:
+  enabled: true
+
+keyhole:
+  enabled: false
+
+scc:
+  anyuidDefault:
+    create: true

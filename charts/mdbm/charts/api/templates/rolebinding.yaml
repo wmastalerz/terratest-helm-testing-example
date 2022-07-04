@@ -1,0 +1,17 @@
+{{- if .Values.rbac.create -}}
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "mdbm-api.fullname" . }}
+  labels:
+{{ include "mdbm-api.labels" . | indent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ template "mdbm-api.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+  apiGroup: ""
+roleRef:
+  kind: Role
+  name:  {{ include "mdbm-api.fullname" . }}
+  apiGroup: rbac.authorization.k8s.io
+{{- end -}}

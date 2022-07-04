@@ -1,0 +1,2 @@
+Inspect MongoDB Operator status by using the following command:
+kubectl -n {{ .Release.Namespace }} get svc -w {{ include "mdbm-operator.fullname" . }}

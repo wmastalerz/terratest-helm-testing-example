@@ -1,0 +1,13 @@
+dependencies:
+  - name: api
+    version: 0.0.1
+    condition: api.enabled
+  - name: operator
+    version: 0.0.1
+    condition: operator.enabled
+  - name: pmm
+    version: 0.0.1
+    condition: pmm.enabled
+  - name: keyhole
+    version: 0.0.1
+    condition: keyhole.enabled

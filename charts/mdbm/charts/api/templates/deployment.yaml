@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mdbm-api.fullname" . }}
+  labels:
+{{ include "mdbm-api.labels" . | indent 4 }}
+{{- with .Values.labels }}
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "mdbm-api.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "mdbm-api.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+{{- with .Values.labels }}
+{{ toYaml . | indent 8 }}
+{{- end }}
+      {{- with .Values.annotations }}
+      annotations:
+{{ toYaml . | indent 8 }}
+      {{- end}}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- if .Values.global.registries.registry1.imagePullSecret.create }}
+      imagePullSecrets:
+      - name: {{ .Values.global.registries.registry1.imagePullSecret.name }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.global.registries.registry1.name }}/{{ .Values.global.images.api.image }}:{{ .Values.global.images.api.tag }}"
+          imagePullPolicy: {{ .Values.global.registries.registry1.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          {{- with .Values.resources }}
+          resources:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          env:
+            - name: CONFIG
+              value: /etc/mdbm/mdbm.yaml
+              {{- with .Values.envs }}
+{{ toYaml . | indent 12 }}
+              {{- end }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/mdbm
+            - name: cert
+              mountPath: /etc/tls
+              readOnly: true
+        {{- with .Values.sidecars }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
+      initContainers:
+        - name: {{ .Values.simplecert.name }}
+          image: "{{ .Values.global.registries.registry1.name }}/{{ .Values.global.images.simplecert.image }}:{{ .Values.global.images.simplecert.tag }}"
+          imagePullPolicy: {{ .Values.global.registries.registry1.imagePullPolicy }}
+          resources:
+            limits:
+              cpu: {{ .Values.simplecert.resources.limits.cpu }}
+              memory: {{ .Values.simplecert.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.simplecert.resources.requests.cpu }}
+              memory: {{ .Values.simplecert.resources.requests.memory }}
+          env:
+            - name: TLS_SECRET_NAME
+              value: {{ include "mdbm-api.fullname" . }}-server-cert
+            - name: TLS_SECRET_NAMESPACE
+              value: {{ .Release.Namespace }}
+        {{- with .Values.initContainers }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
+      serviceAccountName: {{ template "mdbm-api.serviceAccountName" . }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ template "mdbm-api.fullname" . }}
+            items:
+              - key: mdbm.yaml
+                path: mdbm.yaml
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: {{ include "mdbm-api.fullname" . }}-server-cert

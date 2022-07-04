@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mdbm-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "mdbm-operator.labels" . | indent 4 }}
+{{- with .Values.labels }}
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "mdbm-operator.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "mdbm-operator.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- with .Values.labels }}
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      annotations:
+        kubectl.kubernetes.io/default-logs-container: manager
+      {{- with .Values.annotations }}
+{{ toYaml . | indent 8 }}
+      {{- end}}
+    spec:
+      terminationGracePeriodSeconds: 10
+      serviceAccountName: {{ .Values.serviceAccountName }}
+      {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      securityContext:
+         runAsUser: 65532
+      {{- if .Values.global.registries.registry1.imagePullSecret.create }}
+      imagePullSecrets:
+      - name: {{ .Values.global.registries.registry1.imagePullSecret.name }}
+      {{- end }}
+      containers:
+        - name: kube-rbac-proxy
+          image: "{{ .Values.global.registries.registry1.name }}/{{ .Values.global.images.rbacProxy.image }}:{{ .Values.global.images.rbacProxy.tag }}"
+          imagePullPolicy: {{ .Values.global.registries.registry1.imagePullPolicy }}
+          args:
+          - --secure-listen-address=0.0.0.0:8443
+          - --upstream=http://127.0.0.1:8080/
+          - --logtostderr=true
+          - --v=0
+          ports:
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+          {{- with .Values.rbacProxy.resources }}
+          resources:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+        - name: manager
+          image: "{{ .Values.global.registries.registry1.name }}/{{ .Values.global.images.operator.image }}:{{ .Values.global.images.operator.tag }}"
+          imagePullPolicy: {{ .Values.global.registries.registry1.imagePullPolicy }}
+          args:
+          - "--health-probe-bind-address=:8081"
+          - "--metrics-bind-address=127.0.0.1:8080"
+          - "--leader-elect"
+          {{- if .Values.global.clusterWideInstall }}
+          - --watch-namespace=
+          {{- else }}
+          - --watch-namespace={{ .Release.Namespace }}
+          {{- end }}
+          {{- if .Values.global.production }}
+          - --zap-devel=false
+          {{- else }}
+          - --zap-devel=true
+          {{- end }}
+          command:
+          - /manager
+          ports:
+            - containerPort: 9443
+              name: webhook-server
+              protocol: TCP
+          {{- with .Values.resources }}
+          resources:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+          volumeMounts:
+            - mountPath: /tmp/k8s-webhook-server/serving-certs
+              name: cert
+              readOnly: true
+          securityContext:
+            allowPrivilegeEscalation: false
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- with .Values.envs }}
+          env:
+{{ toYaml . | indent 12 }}
+          {{- end }}
+        {{- with .Values.sidecars }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
+      initContainers:
+        - name: {{ .Values.simplecert.name }}
+          image: "{{ .Values.global.registries.registry1.name }}/{{ .Values.global.images.simplecert.image }}:{{ .Values.global.images.simplecert.tag }}"
+          imagePullPolicy: {{ .Values.global.registries.registry1.imagePullPolicy }}
+          resources:
+            limits:
+              cpu: {{ .Values.simplecert.resources.limits.cpu }}
+              memory: {{ .Values.simplecert.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.simplecert.resources.requests.cpu }}
+              memory: {{ .Values.simplecert.resources.requests.memory }}
+          env:
+            - name: TLS_SECRET_NAME
+              value: {{ include "mdbm-operator.fullname" . }}-webhook-server-cert
+            - name: TLS_SECRET_NAMESPACE
+              value: {{ .Release.Namespace }}
+        {{- with .Values.initContainers }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: {{ include "mdbm-operator.fullname" . }}-webhook-server-cert

@@ -1,0 +1,35 @@
+# increasing replicaCount value will induce HA
+replicaCount: 1
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 500Mi
+  requests:
+    cpu: 100m
+    memory: 30Mi
+rbacProxy:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 5m
+      memory: 64Mi
+affinity: {}
+tolerations: []
+sidecars: []
+simplecert:
+  name: simplecert
+  resources:
+    limits:
+      cpu: 100m
+      memory: 40Mi
+    requests:
+      cpu: 100m
+      memory: 30Mi
+initContainers: []
+labels: {}
+annotations: {}
+serviceAccountName: mdbm-operator-controller-manager
+envs: []

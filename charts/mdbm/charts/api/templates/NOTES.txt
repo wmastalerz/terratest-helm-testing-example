@@ -1,0 +1,2 @@
+Port-forward MongoDB Operations API by using the following command:
+kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "mdbm-api.fullname" . }} 8080

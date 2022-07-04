@@ -1,0 +1,140 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ include "mdbm-operator.fullname" . }}-{{ .Release.Namespace }}-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "mdbm-operator.fullname" . }}
+      namespace: {{ .Release.Namespace }}
+      path: /validate-mongodb-samsung-com-v1-mongodb
+  failurePolicy: Fail
+  name: vmongodb.kb.io
+  {{- if not .Values.global.clusterWideInstall }}
+  namespaceSelector:
+    matchExpressions:
+    - key: name
+      operator: In
+      values: ["{{ .Release.Namespace }}"]
+  {{- end }}
+  rules:
+  - apiGroups:
+    - mongodb.samsung.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - mongodbs
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "mdbm-operator.fullname" . }}
+      namespace: {{ .Release.Namespace }}
+      path: /validate-mongodb-samsung-com-v1-mongodbbackup
+  failurePolicy: Fail
+  name: vmongodbbackup.kb.io
+  {{- if not .Values.global.clusterWideInstall }}
+  namespaceSelector:
+    matchExpressions:
+    - key: name
+      operator: In
+      values: ["{{ .Release.Namespace }}"]
+  {{- end }}
+  rules:
+  - apiGroups:
+    - mongodb.samsung.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - mongodbbackups
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "mdbm-operator.fullname" . }}
+      namespace: {{ .Release.Namespace }}
+      path: /validate-mongodb-samsung-com-v1-mongodbcontrollerruntimeconfig
+  failurePolicy: Fail
+  name: vmongodbcontrollerruntimeconfig.kb.io
+  {{- if not .Values.global.clusterWideInstall }}
+  namespaceSelector:
+    matchExpressions:
+    - key: name
+      operator: In
+      values: ["{{ .Release.Namespace }}"]
+  {{- end }}
+  rules:
+  - apiGroups:
+    - mongodb.samsung.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - mongodbcontrollerruntimeconfigs
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "mdbm-operator.fullname" . }}
+      namespace: {{ .Release.Namespace }}
+      path: /validate-mongodb-samsung-com-v1-mongodbreplicaset
+  failurePolicy: Fail
+  name: vmongodbreplicaset.kb.io
+  {{- if not .Values.global.clusterWideInstall }}
+  namespaceSelector:
+    matchExpressions:
+    - key: name
+      operator: In
+      values: ["{{ .Release.Namespace }}"]
+  {{- end }}
+  rules:
+  - apiGroups:
+    - mongodb.samsung.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - mongodbreplicasets
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "mdbm-operator.fullname" . }}
+      namespace: {{ .Release.Namespace }}
+      path: /validate-mongodb-samsung-com-v1-pmmserver
+  failurePolicy: Fail
+  name: vpmmserver.kb.io
+  {{- if not .Values.global.clusterWideInstall }}
+  namespaceSelector:
+    matchExpressions:
+    - key: name
+      operator: In
+      values: ["{{ .Release.Namespace }}"]
+  {{- end }}
+  rules:
+  - apiGroups:
+    - mongodb.samsung.com
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - pmmservers
+  sideEffects: None

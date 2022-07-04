@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mdbm-api.fullname" . }}
+  labels:
+{{ include "mdbm-api.labels" . | indent 4 }}
+data:
+  mdbm.yaml: |-
+    logging:
+      log_level: {{ .Values.logging.log_level }}
+    pmm:
+      address: {{ include "mdbm-api.pmm.address" . }}
+      username: {{ .Values.global.pmm.username }}
+      password: {{ .Values.global.pmm.password }}
+      name: {{ include "mdbm.pmm.fullname" . }}
+      namespace: {{ .Release.Namespace }}
+      container: {{ include "mdbm.pmm.fullname" . }}
+      labels: 
+        {{ .Values.global.pmmLabelName }}: {{ template "mdbm.pmm.fullname" . }}
+    alert_manager:
+      config_path: {{ .Values.alert_manager.config_path }}
+      group_name: {{ .Values.alert_manager.group_name }}
+    security:
+      tls:
+        enabled: {{ .Values.security.tls.enabled }}
+        cert_path: /etc/tls/tls.crt
+        key_path: /etc/tls/tls.key
+    ipv6: {{ .Values.ipv6 }}

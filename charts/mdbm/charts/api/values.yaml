@@ -1,0 +1,53 @@
+replicaCount: 1
+
+resources: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 5000
+  annotations: {}
+
+serviceAccount:
+  create: true
+  name:
+
+rbac:
+  create: true
+
+logging:
+  log_level: info
+
+pmm:
+  port: "443"
+
+alert_manager:
+  config_path: /srv/alertmanager/alertmanager.base.yml
+  group_name: mdbm
+
+security:
+  tls:
+    enabled: false
+affinity: {}
+tolerations: []
+sidecars: []
+
+simplecert:
+  name: simplecert
+  resources:
+    limits:
+      cpu: 100m
+      memory: 40Mi
+    requests:
+      cpu: 100m
+      memory: 30Mi
+
+initContainers: []
+labels: {}
+annotations: {}
+
+ipv6: false
+ipFamilyPolicy: ""
+ipFamilies: []
+
+envs: []

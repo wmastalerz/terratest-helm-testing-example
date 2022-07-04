@@ -1,0 +1,107 @@
+apiVersion: mongodb.samsung.com/v1
+kind: PMMServer
+metadata:
+  name: {{ template "mdbm.pmm.fullname" . }}
+  {{- if .Values.finalizers }}
+  finalizers:
+  {{- range .Values.finalizers }}
+  - {{ . |  quote }}
+  {{- end }}
+  {{- end }}
+{{- if .Values.clusterDomainName }}
+clusterDomainName: {{ .Values.clusterDomainName }}
+{{- end }}
+serviceSpec:
+  type: NodePort
+  {{- with .Values.ipFamilies }}
+  ipFamilies:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+  {{- if .Values.ipFamilyPolicy }}
+  ipFamilyPolicy: {{ .Values.ipFamilyPolicy }}
+  {{- end }}
+spec:
+{{- with .Values.resources }}
+  resources:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+  ipv6: {{ .Values.ipv6 }}
+  serviceAccountName: mdbm-operator-metrics-reader
+  {{- if .Values.global.openshift }}
+  platform: openshift
+  {{- else }}
+  platform: kubernetes
+  {{- end }}
+  image: "{{ .Values.global.registries.registry1.name }}/{{ .Values.global.images.pmm.image }}:{{ .Values.global.images.pmm.tag }}"
+  imagePullPolicy: {{ .Values.global.registries.registry1.imagePullPolicy }}
+  {{- if .Values.global.registries.registry1.imagePullSecret.create }}
+  imagePullSecrets:
+  - {{ .Values.global.registries.registry1.imagePullSecret.name }}
+  {{- end }}
+  timezone: {{ .Values.timezone }}
+  {{- with .Values.envs }}
+  envs:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+  credential: {{ template "mdbm.pmm.fullname" . }}
+  dataRetention: {{ .Values.dataRetention }}
+  {{- with .Values.initContainers }}
+  initContainers:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+  {{- with .Values.sidecars }}
+  sidecars:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+  {{- with .Values.affinity }}
+  affinity:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+  {{- with .Values.tolerations }}
+  tolerations:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+  {{- if .Values.startupProbe.enabled}}
+  startupProbe:
+    initialDelaySeconds: {{ .Values.startupProbe.initialDelaySeconds }}
+    periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+    timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+    successThreshold: {{ .Values.startupProbe.successThreshold }}
+    failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+  {{- end }}
+  {{- if .Values.readinessProbe.enabled}}
+  readinessProbe:
+    initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+    periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+    timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+    successThreshold: {{ .Values.readinessProbe.successThreshold }}
+    failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+  {{- end }}
+  labels:
+  {{- with .Values.labels }}
+{{ toYaml . | indent 4 }}
+  {{- end }}
+    {{ .Values.global.pmmLabelName }}: {{ template "mdbm.pmm.fullname" . }}
+  {{- with .Values.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+  {{- end}}
+  metric:
+    resolution:
+      high: 10s
+      medium: 30s
+      low: 60s
+  persistence:
+    {{- if .Values.persistence.enabled}}
+    volumeClaim:
+      accessModes:
+        - ReadWriteOnce
+      {{- if .Values.persistence.storageClassName }}
+      storageClassName: {{ .Values.persistence.storageClassName }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.persistence.storage }}
+    {{- else }}
+    enabled: false
+    {{- end }}

@@ -1,0 +1,8 @@
+
+replicaCount: 1
+
+resources: {}
+
+tolerations: []
+
+affinity: {}
