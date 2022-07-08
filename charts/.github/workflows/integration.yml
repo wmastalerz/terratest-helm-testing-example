@@ -1,0 +1,23 @@
+name: Integration Tests
+on: pull_request
+jobs:
+  go-tests:
+    name: Run Go Integration Tests
+    runs-on: [ self-hosted ]
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.17
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 0.12.21
+      - name: Download Go Modules
+        working-directory: test
+        run: go mod download
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.2.0
+        if: steps.list-changed.outputs.changed == 'true'
+      - name: Run Go Tests
+        working-directory: test
+        run: go test -v -tags=integration

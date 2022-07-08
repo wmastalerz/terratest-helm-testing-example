@@ -1,8 +1,12 @@
-package test
+package charts
 
 import (
 	"crypto/tls"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +15,8 @@ import (
 	http_helper "github.com/gruntwork-io/terratest/modules/http-helper"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -48,87 +54,53 @@ spec:
     count: 1
 `
 )
-
-var (
-kubectlOptions = k8s.NewKubectlOptions("", "", _namespace)
-releaseName = fmt.Sprintf("mdbm-%s", strings.ToLower(random.UniqueId()))
+var(
+	kubectlOptions = k8s.NewKubectlOptions("", "", _namespace)
+	releaseName = fmt.Sprintf("mdbm-%s", strings.ToLower(random.UniqueId()))
+	t = NewTestingT()
 )
 
-// TestMain MDBM charts installation and verification (may take to 7 minutes)
-func TestMain(m *testing.T) {
+func TestCharts(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Testing Suite")
+}
 
-	helmChartPath := "../charts/mdbm"
-	retries := 15
-	sleep := 30 * time.Second
-	options := &helm.Options{
-		SetValues: map[string]string{"global.images.registry": "registry:8282"},
-	}
+type TestingT struct {
+	GinkgoTInterface
+	desc GinkgoTestDescription
+}
 
-	svcNameFinal := "db-monitor"
+func NewTestingT() TestingT {
+	return TestingT{GinkgoT(), CurrentGinkgoTestDescription()}
+}
 
-	defer helm.Delete(m, options, releaseName, true)
-	helm.Install(m, options, helmChartPath, releaseName)
-	k8s.WaitUntilPodAvailable(m, kubectlOptions, svcNameFinal+"-0", retries, sleep)
-    time.Sleep(60 * time.Second)
+func (i TestingT) Helper() {
 
-    cr := fmt.Sprintf(_mongodb, _mongoCluster,_namespace)
-	defer k8s.KubectlDeleteFromStringE(m, kubectlOptions, cr)
-	err := k8s.KubectlApplyFromStringE(m, kubectlOptions, cr)
-	assert.Nil(m, err, "create mongodb cluster")
+}
+func (i TestingT) Name() string {
+	return i.desc.FullTestText
+}
 
-	m.Run("mdbm", func(t *testing.T) {
-        t.Run("Pmm", svcPmm)
-        t.Run("Api", svcApi)
-        t.Run("Operator", svcOperator)
-		t.Run("Mongodb", mongodbCluster)
+func SetupK8sConfig() {
+	_, filename, _, _ := runtime.Caller(0)
+	k8sConfigFilesPath := path.Join(path.Join(path.Dir(filename), "../test"), "kubeconfigs")
+
+	fmt.Print("k8sConfigFilesPath", k8sConfigFilesPath)
+	var KUBECONFIG string
+
+	filepath.Walk(k8sConfigFilesPath, func(path string, info os.FileInfo, err error) error {
+		if filepath.Ext(path) == ".k8s" {
+			if KUBECONFIG != "" {
+				KUBECONFIG += ":" + info.Name()
+			} else {
+				KUBECONFIG += info.Name()
+			}
+		}
+		return nil
 	})
+
+	os.Setenv("KUBECONFIG", k8sConfigFilesPath+"/"+KUBECONFIG)
 }
-
-// svcPmm
-func svcPmm(t *testing.T) {
-	svcPort := 443
-	svcName := "db-monitor"
-	expectBody := "Monitoring"
-	expectResponse := 200
-
-	tunnel := createTunnel(t, kubectlOptions, svcName, svcPort)
-	endpoint := fmt.Sprintf("https://%s/graph/login", tunnel.Endpoint())
-	verifyStatus(t, kubectlOptions, endpoint, expectBody, expectResponse)
-}
-
-// svcApi
-func svcApi(t *testing.T) {
-	svcPort := 5000
-	svcName := "db-api"
-	expectBody := "results"
-	expectResponse := 200
-
-	tunnel := createTunnel(t, kubectlOptions, svcName, svcPort)
-	endpoint:= fmt.Sprintf("http://%s/api/v1/hosts", tunnel.Endpoint())
-	verifyStatus(t, kubectlOptions, endpoint, expectBody, expectResponse)
-}
-
-// svcOperator
-func svcOperator(t *testing.T) {
-	svcPort := 8443
-	svcName := "db-operator"
-	expectBody := "Unauthorized"
-	expectResponse := 401
-
-	tunnel := createTunnel(t, kubectlOptions, svcName, svcPort)
-	endpoint := fmt.Sprintf("https://%s/", tunnel.Endpoint())
-	verifyStatus(t, kubectlOptions, endpoint, expectBody, expectResponse)
-}
-
-// mongodbCluster
-func mongodbCluster(t *testing.T) {
-	podCount := 3
-	endStatus := "Done"
-
-	verifyMongodbPods(t, kubectlOptions, podCount)
-	verifyMongodbCr(t, kubectlOptions, endStatus)
-}
-
 
 // createTunnel
 func createTunnel(t *testing.T, kubectlOptions *k8s.KubectlOptions, svcName string, RemotePort int) *k8s.Tunnel {
@@ -137,8 +109,11 @@ func createTunnel(t *testing.T, kubectlOptions *k8s.KubectlOptions, svcName stri
 	return tunnel
 }
 
+
+
 // verifyStatus
-func verifyStatus(t *testing.T, kubectlOptions *k8s.KubectlOptions, endpoint string, expectBody string, expectResponse int) {
+func verifyStatus(t *testing.T, kubectlOptions *k8s.KubectlOptions, endpoint string, expectResponse int) string {
+    var currentBody string
 	retries := 2
 	sleep := 10 * time.Second
 	tlsConfig := tls.Config{
@@ -152,15 +127,15 @@ func verifyStatus(t *testing.T, kubectlOptions *k8s.KubectlOptions, endpoint str
 		retries,
 		sleep,
 		func(statusCode int, body string) bool {
-			return statusCode == expectResponse && strings.Contains(body, expectBody)
+			currentBody = body
+			return statusCode == expectResponse
 		},
 	)
+	return currentBody
 }
 
 // verifyMongodbPods
-func verifyMongodbPods(t *testing.T, kubectlOptions *k8s.KubectlOptions, podCount int) {
-	t.Parallel()
-
+func verifyMongodbPods(t *testing.T, kubectlOptions *k8s.KubectlOptions, podCount int) int {
 	filters := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf(
 			"mongodb.samsung.com/cluster=%s,mongodb.samsung.com/namespace=%s",
@@ -172,18 +147,101 @@ func verifyMongodbPods(t *testing.T, kubectlOptions *k8s.KubectlOptions, podCoun
 	for _, pod := range pods {
 		k8s.WaitUntilPodAvailable(t, kubectlOptions, pod.Name, 30, 10*time.Second)
 	}
+	return len(pods)
 }
 
 // verifyMongodbCr
-func verifyMongodbCr(t *testing.T, kubectlOptions *k8s.KubectlOptions, endStage string) {
-timeout := 60 * time.Second
-filter := "-o=jsonpath='{range .items[*]}{.status.stage}{\"\\n\"}{end}'"
+func verifyMongodbCr(t *testing.T, kubectlOptions *k8s.KubectlOptions, endStage string) string {
+    var out string
+	timeout := 60 * time.Second
+	filter := "-o=jsonpath='{range .items[*]}{.status.stage}{\"\\n\"}{end}'"
 
-deadline := time.Now().Add(timeout)
-for {
-    out, _ := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "mdb", filter)
-    if strings.Contains(out, endStage) || time.Now().After(deadline) {
-        break
-    }
+	deadline := time.Now().Add(timeout)
+	for {
+		time.Sleep(10 * time.Second)
+		out, _ = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "mdb", filter)
+		if strings.Contains(out, endStage) || time.Now().After(deadline) {
+			break
+		}
+	}
+    return out
 }
-}
+
+
+var _ = Describe("When I deploy helm chart mdbm operator and CR mongodb", func() {
+	Context("The Operator and Mongodb have been deployed", Ordered, func() {
+		options := &helm.Options{
+			SetValues: map[string]string{"global.images.registry": "registry:8282"},
+		}
+		cr := fmt.Sprintf(_mongodb, _mongoCluster,_namespace)
+
+		BeforeAll(func() {
+			SetupK8sConfig()
+			helmChartPath := "../charts/mdbm"
+			retries := 15
+			sleep := 30 * time.Second
+			svcNameFinal := "db-monitor"
+
+			helm.Install(t, options, helmChartPath, releaseName)
+			k8s.WaitUntilPodAvailable(t, kubectlOptions, svcNameFinal+"-0", retries, sleep)
+			time.Sleep(60 * time.Second)
+			err := k8s.KubectlApplyFromStringE(t, kubectlOptions, cr)
+			assert.Nil(t, err, "create mongodb cluster")
+
+		})
+
+		AfterAll(func() {
+			helm.Delete(t, options, releaseName, true)
+			k8s.KubectlDeleteFromStringE(t, kubectlOptions, cr)
+		})
+
+		Describe("I send HTTP GET request to service", func() {
+			It("Should PMM return dashboard graph/login contain MONITORING", func() {
+				svcPort := 443
+				svcName := "db-monitor"
+				expectResponse := 200
+				expectBody := "Monitoring"
+
+				tunnel := createTunnel(&testing.T{}, kubectlOptions, svcName, svcPort)
+				endpoint := fmt.Sprintf("https://%s/graph/login", tunnel.Endpoint())
+				finalBody := verifyStatus(&testing.T{}, kubectlOptions, endpoint, expectResponse)
+				Expect(finalBody).Should(ContainSubstring(expectBody))
+			})
+			It("Should API return api/v1/hosts response with RESULTS", func() {
+				svcPort := 5000
+				svcName := "db-api"
+				expectResponse := 200
+				expectBody := "results"
+
+				tunnel := createTunnel(&testing.T{}, kubectlOptions, svcName, svcPort)
+				endpoint:= fmt.Sprintf("http://%s/api/v1/hosts", tunnel.Endpoint())
+				finalBody := verifyStatus(&testing.T{}, kubectlOptions, endpoint, expectResponse)
+				Expect(finalBody).Should(ContainSubstring(expectBody))
+			})
+			It("Should OPERATOR not access into svc because UNAUTHORIZED", func() {
+				svcPort := 8443
+				svcName := "db-operator"
+				expectResponse := 401
+				expectBody := "Unauthorized"
+
+				tunnel := createTunnel(&testing.T{}, kubectlOptions, svcName, svcPort)
+				endpoint := fmt.Sprintf("https://%s/", tunnel.Endpoint())
+				finalBody := verifyStatus(&testing.T{}, kubectlOptions, endpoint, expectResponse)
+				Expect(finalBody).Should(ContainSubstring(expectBody))
+			})
+		})
+
+		Describe("I read the number of pods and CR final stage" , func() {
+			It("Should have expected number of pod", func() {
+				podCount := 3
+				currCount := verifyMongodbPods(&testing.T{}, kubectlOptions, podCount)
+				Expect(currCount).To(Equal(podCount), "min. 3 pods (data0-0, config0-0, mongo0-0)" )
+			})
+			It("Should have stage DONE", func() {
+				endStatus := "Done"
+				finalStage :=	verifyMongodbCr(&testing.T{}, kubectlOptions, endStatus)
+				Expect(finalStage).Should(ContainSubstring(endStatus))
+			})
+		})
+	})
+})

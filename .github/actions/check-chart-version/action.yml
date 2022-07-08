@@ -1,0 +1,16 @@
+name: 'Check version of chart'
+description: 'Check version of chart'
+inputs:
+  chart_dir:
+    description: 'Directory of chart'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Check version of chart
+      run: |
+          EXPECTED_VERSION=$(cat ${{ inputs.chart_dir }}/VERSION)
+          CURRENT_VERSION=$(cat ${{ inputs.chart_dir }}/Chart.yaml | grep version | awk -F: '{print $2}' | awk '{$1=$1};1')
+
+          [ "$EXPECTED_VERSION" = "$CURRENT_VERSION" ]
+      shell: bash

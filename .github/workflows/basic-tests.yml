@@ -1,0 +1,32 @@
+name: "Basic tests"
+on:
+  push:
+    paths:
+    - 'charts/**'
+    - 'lintconf.yaml'
+    - 'chart_schema.yaml'
+    - 'ct.yaml'
+    - 'CHANGELOG*.md'
+    - 'Makefile'
+    - '.github/**'
+jobs:
+  lint:
+    runs-on: code-default
+    container:
+      image: python:3.8
+    steps:
+      - uses: CODE-Actions/checkout@master
+      - name: Set up Helm
+        uses: CODE-Actions/azure-setup-helm@v2.1
+        with:
+          version: v3.9.0
+      - name: Set up chart-testing
+        uses: CODE-Actions/helm-chart-testing-action@main
+        with:
+          version: v3.6.0
+      - name: Run chart linter
+        run: make lint
+      - name: Check version of MDBM chart
+        uses: ./.github/actions/check-chart-version
+        with:
+          chart_dir: charts/mdbm
